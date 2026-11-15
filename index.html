@@ -16,7 +16,7 @@ label{display:block;font-size:12px;font-weight:650;margin:9px 0 5px}
 button{border:0;border-radius:8px;background:var(--blue);color:white;padding:10px 14px;font-weight:650;cursor:pointer}
 button.secondary{background:#eaf0f8;color:#24364d}button.danger{background:#fff0f0;color:var(--red)}
 .row{display:flex;gap:9px;align-items:center;flex-wrap:wrap}.row>*{flex:1}
-.formgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px 12px}
+.formgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px 12px}.sectiontitle{grid-column:1/-1;margin:14px 0 2px;padding-top:10px;border-top:1px solid var(--line);font-weight:800;color:#29415f}.fieldhint{font-size:11px;color:var(--muted)}
 .tablewrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:600px}th,td{text-align:left;padding:10px;border-bottom:1px solid var(--line)}th{background:#f8fafc;color:var(--muted);font-size:11px;text-transform:uppercase}
 .status{display:inline-block;padding:3px 8px;border-radius:20px;background:#e8f7f0;color:#08744d;font-size:11px;font-weight:700}
 .notice{padding:11px 13px;border-radius:8px;background:#eff6ff;color:#1e40af;margin:12px 0}
@@ -53,15 +53,41 @@ button.secondary{background:#eaf0f8;color:#24364d}button.danger{background:#fff0
 <div class="notice">Cloud pilot: records are stored in your Supabase database. Only authorized company administrators can currently create or update records. Employee and manager self-service permissions will be added in later stages.</div>
 <div class="panel">
 <div class="row"><h2>Employee Master</h2><button id="refreshBtn" class="secondary">Refresh</button></div>
+<p class="muted">Complete the employee profile. Fields marked * are compulsory. Aadhaar and full bank details are intentionally not collected in this pilot.</p>
 <div class="formgrid">
-<div><label>Employee code *</label><input id="empCode" placeholder="AML-1006"></div>
-<div><label>First name *</label><input id="firstName" placeholder="First name"></div>
+<div class="sectiontitle">Personal information</div>
+<div><label>Employee code *</label><input id="empCode" placeholder="AML-1006" required></div>
+<div><label>First name *</label><input id="firstName" placeholder="First name" required></div>
+<div><label>Middle name</label><input id="middleName" placeholder="Middle name"></div>
 <div><label>Last name</label><input id="lastName" placeholder="Last name"></div>
-<div><label>Mobile</label><input id="mobile" placeholder="Mobile number"></div>
-<div><label>Email</label><input id="empEmail" type="email" placeholder="Employee email"></div>
-<div><label>Joining date</label><input id="joiningDate" type="date"></div>
+<div><label>Date of birth</label><input id="dob" type="date"></div>
+<div><label>Gender</label><select id="gender"><option value="">Select</option><option>Male</option><option>Female</option><option>Other</option><option>Prefer not to say</option></select></div>
+<div><label>Marital status</label><select id="maritalStatus"><option value="">Select</option><option>Single</option><option>Married</option><option>Widowed</option><option>Divorced</option></select></div>
+<div><label>Blood group</label><select id="bloodGroup"><option value="">Select</option><option>A+</option><option>A-</option><option>B+</option><option>B-</option><option>AB+</option><option>AB-</option><option>O+</option><option>O-</option></select></div>
+<div class="sectiontitle">Contact information</div>
+<div><label>Mobile number</label><input id="mobile" type="tel" placeholder="Mobile number"></div>
+<div><label>Personal / official email</label><input id="empEmail" type="email" placeholder="Employee email"></div>
+<div><label>Emergency contact name</label><input id="emergencyName" placeholder="Contact person"></div>
+<div><label>Emergency contact mobile</label><input id="emergencyMobile" type="tel" placeholder="Emergency number"></div>
+<div style="grid-column:1/-1"><label>Address</label><input id="address" placeholder="Present / communication address"></div>
+<div class="sectiontitle">Employment information</div>
+<div><label>Date of joining</label><input id="joiningDate" type="date"></div>
+<div><label>Confirmation date</label><input id="confirmationDate" type="date"></div>
+<div><label>Department (name)</label><input id="departmentName" placeholder="e.g. Production / HR / Mechanical"></div>
+<div><label>Designation (name)</label><input id="designationName" placeholder="e.g. Engineer / Manager"></div>
+<div><label>Employment type</label><select id="employmentType"><option value="">Select</option><option>Permanent</option><option>Contract</option><option>Trainee</option><option>Apprentice</option><option>Consultant</option></select></div>
+<div><label>Plant / work location</label><input id="workLocation" placeholder="e.g. Kuarmunda Plant"></div>
+<div><label>Employee status</label><select id="empStatus"><option>Active</option><option>On Leave</option><option>Notice Period</option><option>Separated</option><option>Inactive</option></select></div>
+<div class="sectiontitle">Statutory details (optional)</div>
+<div><label>PAN</label><input id="pan" placeholder="PAN"></div>
+<div><label>UAN / PF number</label><input id="uan" placeholder="UAN"></div>
+<div><label>ESI number</label><input id="esi" placeholder="ESI number"></div>
+<div><label>Bank name</label><input id="bankName" placeholder="Bank name"></div>
+<div><label>Bank account last 4 digits only</label><input id="bankLast4" inputmode="numeric" maxlength="4" placeholder="Last 4 digits"></div>
+<div><label>IFSC</label><input id="ifsc" placeholder="IFSC"></div>
 </div>
-<div class="row" style="margin-top:12px"><button id="addEmployeeBtn">Save employee</button></div>
+<div class="fieldhint">Sensitive identity and financial documents should be collected only after secure document storage and access controls are configured.</div>
+<div class="row" style="margin-top:12px"><button id="addEmployeeBtn">Save employee profile</button></div>
 <div id="employeeMessage"></div>
 </div>
 <div class="panel"><h2>Employee directory</h2><div class="tablewrap"><table><thead><tr><th>Employee code</th><th>Name</th><th>Mobile</th><th>Email</th><th>Status</th></tr></thead><tbody id="employeeRows"><tr><td colspan="5">Loading…</td></tr></tbody></table></div></div>
@@ -119,11 +145,13 @@ $("refreshBtn").onclick=async()=>{try{await loadData();message("globalMessage","
 $("addEmployeeBtn").onclick=async()=>{
  const code=$("empCode").value.trim(),first=$("firstName").value.trim();
  if(!code||!first){message("employeeMessage","Employee code and first name are required.",true);return;}
- const row={company_id:companyId,employee_code:code,first_name:first,last_name:$("lastName").value.trim()||null,mobile:$("mobile").value.trim()||null,email:$("empEmail").value.trim()||null,joining_date:$("joiningDate").value||null,status:"Active"};
- const {error}=await sb.from("employees").insert(row);
+ const row={company_id:companyId,employee_code:code,first_name:first,middle_name:$("middleName").value.trim()||null,last_name:$("lastName").value.trim()||null,date_of_birth:$("dob").value||null,gender:$("gender").value||null,marital_status:$("maritalStatus").value||null,blood_group:$("bloodGroup").value||null,mobile:$("mobile").value.trim()||null,email:$("empEmail").value.trim()||null,address:$("address").value.trim()||null,emergency_contact_name:$("emergencyName").value.trim()||null,emergency_contact_mobile:$("emergencyMobile").value.trim()||null,joining_date:$("joiningDate").value||null,confirmation_date:$("confirmationDate").value||null,department_name:$("departmentName").value.trim()||null,designation_name:$("designationName").value.trim()||null,employment_type:$("employmentType").value||null,work_location:$("workLocation").value.trim()||null,status:$("empStatus").value||"Active"};
+ const {data:created,error}=await sb.from("employees").insert(row).select("id").single();
  if(error){message("employeeMessage",error.message,true);return;}
- ["empCode","firstName","lastName","mobile","empEmail","joiningDate"].forEach(id=>$(id).value="");
- message("employeeMessage","Employee saved to the cloud.");try{await loadData();}catch(e){message("employeeMessage","Saved, but refresh failed: "+e.message,true);}
+ const statutory={company_id:companyId,employee_id:created.id,pan:$("pan").value.trim()||null,pf_uan:$("uan").value.trim()||null,esi_number:$("esi").value.trim()||null,bank_name:$("bankName").value.trim()||null,bank_account_last4:$("bankLast4").value.trim()||null,ifsc:$("ifsc").value.trim()||null};
+ if(Object.values(statutory).some((v,i)=>i>1 && v)){const {error:se}=await sb.from("employee_statutory").insert(statutory);if(se){message("employeeMessage","Employee profile saved, but statutory details were not saved: "+se.message,true);try{await loadData();}catch(e){}return;}}
+ ["empCode","firstName","middleName","lastName","dob","gender","maritalStatus","bloodGroup","mobile","empEmail","emergencyName","emergencyMobile","address","joiningDate","confirmationDate","departmentName","designationName","employmentType","workLocation","empStatus","pan","uan","esi","bankName","bankLast4","ifsc"].forEach(id=>$(id).value="");
+ message("employeeMessage","Complete employee profile saved to Supabase.");try{await loadData();}catch(e){message("employeeMessage","Saved, but refresh failed: "+e.message,true);}
 };
 sb.auth.onAuthStateChange(async(event, session)=>{
  if(event==="PASSWORD_RECOVERY"){showRecovery();return;}
