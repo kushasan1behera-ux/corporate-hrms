@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#14243a"><title>Corporate HRMS | Adhunik Metaliks Ltd</title>
+<style>
+:root{--navy:#14243a;--blue:#2563eb;--bg:#f3f6fb;--ink:#172338;--muted:#64748b;--line:#e3e9f2;--white:#fff;--green:#13865c;--red:#b42323}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 system-ui,Arial,sans-serif}
+header{background:var(--navy);color:white;padding:15px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px;position:sticky;top:0;z-index:3}
+.brand{font-weight:800;font-size:18px}.brand small{display:block;font-size:10px;color:#b8c6d9;letter-spacing:1.2px}
+main{max-width:1100px;margin:auto;padding:24px 16px}.panel,.metric{background:white;border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:15px}
+h1{font-size:24px;margin:0 0 5px}h2{font-size:17px;margin:0 0 12px}.muted{color:var(--muted);font-size:12px}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.metric b{font-size:25px;display:block}
+input,select{width:100%;padding:10px;border:1px solid #d5deea;border-radius:7px;font:inherit;background:white}
+label{display:block;font-size:12px;font-weight:650;margin:9px 0 5px}
+button{border:0;border-radius:8px;background:var(--blue);color:white;padding:10px 14px;font-weight:650;cursor:pointer}
+button.secondary{background:#eaf0f8;color:#24364d}button.danger{background:#fff0f0;color:var(--red)}
+.row{display:flex;gap:9px;align-items:center;flex-wrap:wrap}.row>*{flex:1}
+.formgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px 12px}
+.tablewrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:600px}th,td{text-align:left;padding:10px;border-bottom:1px solid var(--line)}th{background:#f8fafc;color:var(--muted);font-size:11px;text-transform:uppercase}
+.status{display:inline-block;padding:3px 8px;border-radius:20px;background:#e8f7f0;color:#08744d;font-size:11px;font-weight:700}
+.notice{padding:11px 13px;border-radius:8px;background:#eff6ff;color:#1e40af;margin:12px 0}
+.error{background:#fff0f0;color:#a11b1b}.hidden{display:none!important}
+#message{margin:10px 0;white-space:pre-wrap}.topactions{display:flex;gap:8px;align-items:center}
+@media(max-width:650px){.grid{grid-template-columns:1fr 1fr}.formgrid{grid-template-columns:1fr}main{padding:16px 11px}.brand{font-size:15px}}
+.recovery-box{border:1px solid #d7e2f0;background:#f8fbff;border-radius:10px;padding:16px;margin:12px 0}\n</style>
+</head>
+<body>
+<header><div class="brand">CORPORATE HRMS<small>ADHUNIK METALIKS LTD · CLOUD PILOT</small></div><div class="topactions"><span id="userLabel" class="muted" style="color:#d9e3ef"></span><button id="logoutBtn" class="secondary hidden">Sign out</button></div></header>
+<main>
+<section id="recoveryPanel" class="panel hidden">
+<h1>Set a new password</h1>
+<p class="muted">You opened a password recovery link. Enter and confirm your new password below.</p>
+<label>New password</label><input id="newPassword" type="password" autocomplete="new-password" placeholder="At least 8 characters">
+<label>Confirm new password</label><input id="confirmPassword" type="password" autocomplete="new-password" placeholder="Re-enter new password">
+<div class="row" style="margin-top:14px"><button id="savePasswordBtn">Save new password</button></div>
+<div id="recoveryMessage"></div>
+</section>
+<section id="loginPanel" class="panel">
+<h1>Owner / HRMS Login</h1><p class="muted">Sign in with the email and password already registered in this Supabase project.</p>
+<label>Email address</label><input id="email" type="email" autocomplete="username" placeholder="Owner email">
+<label>Password</label><input id="password" type="password" autocomplete="current-password" placeholder="Your password">
+<div class="row" style="margin-top:14px"><button id="loginBtn">Sign in</button><button id="resetBtn" class="secondary">Send password reset email</button></div>
+<div id="loginMessage"></div>
+</section>
+<section id="appPanel" class="hidden">
+<h1 id="welcome">Corporate HRMS</h1><p class="muted" id="companyLine">Loading company profile…</p>
+<div class="grid">
+<div class="metric"><span class="muted">Employees</span><b id="employeeCount">0</b></div>
+<div class="metric"><span class="muted">Attendance records</span><b id="attendanceCount">0</b></div>
+<div class="metric"><span class="muted">Your role</span><b id="roleLabel" style="font-size:17px">—</b></div>
+</div>
+<div class="notice">Cloud pilot: records are stored in your Supabase database. Only authorized company administrators can currently create or update records. Employee and manager self-service permissions will be added in later stages.</div>
+<div class="panel">
+<div class="row"><h2>Employee Master</h2><button id="refreshBtn" class="secondary">Refresh</button></div>
+<div class="formgrid">
+<div><label>Employee code *</label><input id="empCode" placeholder="AML-1006"></div>
+<div><label>First name *</label><input id="firstName" placeholder="First name"></div>
+<div><label>Last name</label><input id="lastName" placeholder="Last name"></div>
+<div><label>Mobile</label><input id="mobile" placeholder="Mobile number"></div>
+<div><label>Email</label><input id="empEmail" type="email" placeholder="Employee email"></div>
+<div><label>Joining date</label><input id="joiningDate" type="date"></div>
+</div>
+<div class="row" style="margin-top:12px"><button id="addEmployeeBtn">Save employee</button></div>
+<div id="employeeMessage"></div>
+</div>
+<div class="panel"><h2>Employee directory</h2><div class="tablewrap"><table><thead><tr><th>Employee code</th><th>Name</th><th>Mobile</th><th>Email</th><th>Status</th></tr></thead><tbody id="employeeRows"><tr><td colspan="5">Loading…</td></tr></tbody></table></div></div>
+<div class="panel"><h2>Recent attendance</h2><div class="tablewrap"><table><thead><tr><th>Date</th><th>Employee ID</th><th>Status</th><th>Late minutes</th><th>Overtime minutes</th></tr></thead><tbody id="attendanceRows"><tr><td colspan="5">Loading…</td></tr></tbody></table></div></div>
+</section>
+<div id="globalMessage"></div>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL = "https://htfhiefnlkzjfojnzfoh.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_8kCm66wRMwe6qLmLkCm4VA_WdQhFP6W";
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+let companyId = null;
+const $ = id => document.getElementById(id);
+function message(id,text,isError=false){const el=$(id);el.textContent=text;el.className=isError?"error":"notice";}
+function showApp(user){$("loginPanel").classList.add("hidden");$("recoveryPanel").classList.add("hidden");$("appPanel").classList.remove("hidden");$("logoutBtn").classList.remove("hidden");$("userLabel").textContent=user.email||"Signed in";}
+function showLogin(){$("loginPanel").classList.remove("hidden");$("recoveryPanel").classList.add("hidden");$("appPanel").classList.add("hidden");$("logoutBtn").classList.add("hidden");$("userLabel").textContent="";}
+function showRecovery(){$("loginPanel").classList.add("hidden");$("appPanel").classList.add("hidden");$("recoveryPanel").classList.remove("hidden");$("logoutBtn").classList.add("hidden");$("userLabel").textContent="Password recovery";}
+async function loadData(){
+  $("employeeRows").innerHTML='<tr><td colspan="5">Loading…</td></tr>';
+  const {data:profile,error:pe}=await sb.from("user_profiles").select("company_id,full_name").single();
+  if(pe) throw pe;
+  companyId=profile.company_id;
+  const {data:company,error:ce}=await sb.from("companies").select("name").eq("id",companyId).single();
+  if(ce) throw ce;
+  const {data:roles,error:re}=await sb.from("user_roles").select("role_id,roles(name)").eq("user_id",(await sb.auth.getUser()).data.user.id);
+  if(re) throw re;
+  $("welcome").textContent="Welcome, "+profile.full_name;
+  $("companyLine").textContent=company.name;
+  $("roleLabel").textContent=(roles||[]).map(x=>x.roles?.name).filter(Boolean).join(", ")||"No role";
+  const {data:employees,error:ee}=await sb.from("employees").select("id,employee_code,first_name,last_name,mobile,email,status").eq("company_id",companyId).order("employee_code");
+  if(ee) throw ee;
+  $("employeeCount").textContent=employees.length;
+  $("employeeRows").innerHTML=employees.length?employees.map(e=>`<tr><td>${safe(e.employee_code)}</td><td>${safe([e.first_name,e.last_name].filter(Boolean).join(" "))}</td><td>${safe(e.mobile||"")}</td><td>${safe(e.email||"")}</td><td><span class="status">${safe(e.status)}</span></td></tr>`).join(""):'<tr><td colspan="5">No employees registered yet.</td></tr>';
+  const {data:att,error:ae}=await sb.from("attendance").select("attendance_date,employee_id,status,late_minutes,overtime_minutes").eq("company_id",companyId).order("attendance_date",{ascending:false}).limit(10);
+  if(ae) throw ae;
+  $("attendanceCount").textContent=att.length;
+  $("attendanceRows").innerHTML=att.length?att.map(a=>`<tr><td>${safe(a.attendance_date)}</td><td>${safe(a.employee_id)}</td><td>${safe(a.status)}</td><td>${a.late_minutes||0}</td><td>${a.overtime_minutes||0}</td></tr>`).join(""):'<tr><td colspan="5">No attendance records yet.</td></tr>';
+}
+function safe(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+$("loginBtn").onclick=async()=>{message("loginMessage","Signing in…");const {data,error}=await sb.auth.signInWithPassword({email:$("email").value.trim(),password:$("password").value});if(error){message("loginMessage",error.message,true);return;}showApp(data.user);try{await loadData();message("globalMessage","Cloud connection successful.");}catch(e){message("globalMessage","Signed in, but data access failed: "+e.message,true);}};
+$("resetBtn").onclick=async()=>{const email=$("email").value.trim();if(!email){message("loginMessage","Enter your account email first.",true);return;}const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});message("loginMessage",error?error.message:"If the account exists, Supabase will send a password reset email.");};
+$("savePasswordBtn").onclick=async()=>{
+ const p=$("newPassword").value, c=$("confirmPassword").value;
+ if(p.length<8){message("recoveryMessage","Use a password with at least 8 characters.",true);return;}
+ if(p!==c){message("recoveryMessage","The passwords do not match.",true);return;}
+ const {error}=await sb.auth.updateUser({password:p});
+ if(error){message("recoveryMessage",error.message,true);return;}
+ message("recoveryMessage","Password updated successfully. You can now sign in with your new password.");
+ $("newPassword").value="";$("confirmPassword").value="";
+ await sb.auth.signOut();showLogin();
+};
+$("logoutBtn").onclick=async()=>{await sb.auth.signOut();showLogin();};
+$("refreshBtn").onclick=async()=>{try{await loadData();message("globalMessage","Data refreshed.");}catch(e){message("globalMessage",e.message,true);}};
+$("addEmployeeBtn").onclick=async()=>{
+ const code=$("empCode").value.trim(),first=$("firstName").value.trim();
+ if(!code||!first){message("employeeMessage","Employee code and first name are required.",true);return;}
+ const row={company_id:companyId,employee_code:code,first_name:first,last_name:$("lastName").value.trim()||null,mobile:$("mobile").value.trim()||null,email:$("empEmail").value.trim()||null,joining_date:$("joiningDate").value||null,status:"Active"};
+ const {error}=await sb.from("employees").insert(row);
+ if(error){message("employeeMessage",error.message,true);return;}
+ ["empCode","firstName","lastName","mobile","empEmail","joiningDate"].forEach(id=>$(id).value="");
+ message("employeeMessage","Employee saved to the cloud.");try{await loadData();}catch(e){message("employeeMessage","Saved, but refresh failed: "+e.message,true);}
+};
+sb.auth.onAuthStateChange(async(event, session)=>{
+ if(event==="PASSWORD_RECOVERY"){showRecovery();return;}
+ if(event==="SIGNED_IN" && session && !$("recoveryPanel").classList.contains("hidden")) return;
+});
+(async()=>{
+ const params=new URLSearchParams(location.search);
+ const hashParams=new URLSearchParams(location.hash.replace(/^#/,""));
+ const recoveryError=params.get("error_description")||hashParams.get("error_description");
+ if(recoveryError){showRecovery();message("recoveryMessage",decodeURIComponent(recoveryError.replace(/\+/g," ")),true);return;}
+ const {data:{session}}=await sb.auth.getSession();
+ if(session && hashParams.get("type")!=="recovery"){showApp(session.user);try{await loadData();}catch(e){message("globalMessage",e.message,true);}}
+ else if(hashParams.get("type")==="recovery"){showRecovery();}
+ else showLogin();
+})();
+</script>
+</body></html>
