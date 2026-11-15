@@ -17,7 +17,7 @@ button{border:0;border-radius:8px;background:var(--blue);color:white;padding:10p
 button.secondary{background:#eaf0f8;color:#24364d}button.danger{background:#fff0f0;color:var(--red)}
 .row{display:flex;gap:9px;align-items:center;flex-wrap:wrap}.row>*{flex:1}
 .formgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px 12px}.sectiontitle{grid-column:1/-1;margin:14px 0 2px;padding-top:10px;border-top:1px solid var(--line);font-weight:800;color:#29415f}.fieldhint{font-size:11px;color:var(--muted)}
-.tablewrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:600px}th,td{text-align:left;padding:10px;border-bottom:1px solid var(--line)}th{background:#f8fafc;color:var(--muted);font-size:11px;text-transform:uppercase}
+.tablewrap{overflow:auto}.searchbar{display:grid;grid-template-columns:2fr 1fr;gap:10px;margin:10px 0}.actions{display:flex;gap:6px}.actions button{padding:7px 10px;font-size:12px}.editing{background:#fff8e7;border:1px solid #f0d28a;padding:10px;border-radius:8px;margin-bottom:12px}@media(max-width:650px){.searchbar{grid-template-columns:1fr}}table{width:100%;border-collapse:collapse;min-width:600px}th,td{text-align:left;padding:10px;border-bottom:1px solid var(--line)}th{background:#f8fafc;color:var(--muted);font-size:11px;text-transform:uppercase}
 .status{display:inline-block;padding:3px 8px;border-radius:20px;background:#e8f7f0;color:#08744d;font-size:11px;font-weight:700}
 .notice{padding:11px 13px;border-radius:8px;background:#eff6ff;color:#1e40af;margin:12px 0}
 .error{background:#fff0f0;color:#a11b1b}.hidden{display:none!important}
@@ -87,10 +87,10 @@ button.secondary{background:#eaf0f8;color:#24364d}button.danger{background:#fff0
 <div><label>IFSC</label><input id="ifsc" placeholder="IFSC"></div>
 </div>
 <div class="fieldhint">Sensitive identity and financial documents should be collected only after secure document storage and access controls are configured.</div>
-<div class="row" style="margin-top:12px"><button id="addEmployeeBtn">Save employee profile</button></div>
+<div class="row" style="margin-top:12px"><button id="addEmployeeBtn">Save employee profile</button><button id="cancelEditBtn" class="secondary hidden" type="button">Cancel edit</button></div>
 <div id="employeeMessage"></div>
 </div>
-<div class="panel"><h2>Employee directory</h2><div class="tablewrap"><table><thead><tr><th>Employee code</th><th>Name</th><th>Mobile</th><th>Email</th><th>Status</th></tr></thead><tbody id="employeeRows"><tr><td colspan="5">Loading…</td></tr></tbody></table></div></div>
+<div class="panel"><h2>Employee directory</h2><div class="searchbar"><input id="employeeSearch" type="search" placeholder="Search by employee code, name, mobile or email"><select id="statusFilter"><option value="">All statuses</option><option>Active</option><option>On Leave</option><option>Notice Period</option><option>Separated</option><option>Inactive</option></select></div><div class="muted" id="directorySummary"></div><div class="tablewrap"><table><thead><tr><th>Employee code</th><th>Name</th><th>Mobile</th><th>Email</th><th>Status</th><th>Action</th></tr></thead><tbody id="employeeRows"><tr><td colspan="6">Loading…</td></tr></tbody></table></div></div>
 <div class="panel"><h2>Recent attendance</h2><div class="tablewrap"><table><thead><tr><th>Date</th><th>Employee ID</th><th>Status</th><th>Late minutes</th><th>Overtime minutes</th></tr></thead><tbody id="attendanceRows"><tr><td colspan="5">Loading…</td></tr></tbody></table></div></div>
 </section>
 <div id="globalMessage"></div>
@@ -101,6 +101,8 @@ const SUPABASE_URL = "https://htfhiefnlkzjfojnzfoh.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_8kCm66wRMwe6qLmLkCm4VA_WdQhFP6W";
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 let companyId = null;
+let employeeCache = [];
+let editingEmployeeId = null;
 const $ = id => document.getElementById(id);
 function message(id,text,isError=false){const el=$(id);el.textContent=text;el.className=isError?"error":"notice";}
 function showApp(user){$("loginPanel").classList.add("hidden");$("recoveryPanel").classList.add("hidden");$("appPanel").classList.remove("hidden");$("logoutBtn").classList.remove("hidden");$("userLabel").textContent=user.email||"Signed in";}
@@ -118,16 +120,46 @@ async function loadData(){
   $("welcome").textContent="Welcome, "+profile.full_name;
   $("companyLine").textContent=company.name;
   $("roleLabel").textContent=(roles||[]).map(x=>x.roles?.name).filter(Boolean).join(", ")||"No role";
-  const {data:employees,error:ee}=await sb.from("employees").select("id,employee_code,first_name,last_name,mobile,email,status").eq("company_id",companyId).order("employee_code");
+  const {data:employees,error:ee}=await sb.from("employees").select("id,employee_code,first_name,middle_name,last_name,date_of_birth,gender,marital_status,blood_group,mobile,email,address,emergency_contact_name,emergency_contact_mobile,joining_date,confirmation_date,department_name,designation_name,employment_type,work_location,status").eq("company_id",companyId).order("employee_code");
   if(ee) throw ee;
-  $("employeeCount").textContent=employees.length;
-  $("employeeRows").innerHTML=employees.length?employees.map(e=>`<tr><td>${safe(e.employee_code)}</td><td>${safe([e.first_name,e.last_name].filter(Boolean).join(" "))}</td><td>${safe(e.mobile||"")}</td><td>${safe(e.email||"")}</td><td><span class="status">${safe(e.status)}</span></td></tr>`).join(""):'<tr><td colspan="5">No employees registered yet.</td></tr>';
+  employeeCache=employees||[];
+  $("employeeCount").textContent=employeeCache.length;
+  renderEmployeeDirectory();
   const {data:att,error:ae}=await sb.from("attendance").select("attendance_date,employee_id,status,late_minutes,overtime_minutes").eq("company_id",companyId).order("attendance_date",{ascending:false}).limit(10);
   if(ae) throw ae;
   $("attendanceCount").textContent=att.length;
   $("attendanceRows").innerHTML=att.length?att.map(a=>`<tr><td>${safe(a.attendance_date)}</td><td>${safe(a.employee_id)}</td><td>${safe(a.status)}</td><td>${a.late_minutes||0}</td><td>${a.overtime_minutes||0}</td></tr>`).join(""):'<tr><td colspan="5">No attendance records yet.</td></tr>';
 }
 function safe(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function renderEmployeeDirectory(){
+ const q=(($("employeeSearch")?.value)||"").trim().toLowerCase();
+ const status=(($("statusFilter")?.value)||"");
+ const rows=employeeCache.filter(e=>{
+  const hay=[e.employee_code,e.first_name,e.middle_name,e.last_name,e.mobile,e.email,e.department_name,e.designation_name].join(" ").toLowerCase();
+  return (!q||hay.includes(q))&&(!status||e.status===status);
+ });
+ $("directorySummary").textContent=`Showing ${rows.length} of ${employeeCache.length} employee(s)`;
+ $("employeeRows").innerHTML=rows.length?rows.map(e=>`<tr><td>${safe(e.employee_code)}</td><td>${safe([e.first_name,e.middle_name,e.last_name].filter(Boolean).join(" "))}</td><td>${safe(e.mobile||"")}</td><td>${safe(e.email||"")}</td><td><span class="status">${safe(e.status)}</span></td><td><div class="actions"><button type="button" data-edit="${safe(e.id)}">Edit</button></div></td></tr>`).join(""):'<tr><td colspan="6">No matching employees.</td></tr>';
+ document.querySelectorAll("[data-edit]").forEach(b=>b.addEventListener("click",()=>startEmployeeEdit(b.dataset.edit)));
+}
+function setFormValue(id,value){const el=$(id);if(el)el.value=value??"";}
+function startEmployeeEdit(id){
+ const e=employeeCache.find(x=>x.id===id);if(!e)return;
+ editingEmployeeId=id;
+ const fields={empCode:e.employee_code,firstName:e.first_name,middleName:e.middle_name,lastName:e.last_name,dob:e.date_of_birth,gender:e.gender,maritalStatus:e.marital_status,bloodGroup:e.blood_group,mobile:e.mobile,empEmail:e.email,address:e.address,emergencyName:e.emergency_contact_name,emergencyMobile:e.emergency_contact_mobile,joiningDate:e.joining_date,confirmationDate:e.confirmation_date,departmentName:e.department_name,designationName:e.designation_name,employmentType:e.employment_type,workLocation:e.work_location,empStatus:e.status};
+ Object.entries(fields).forEach(([k,v])=>setFormValue(k,v));
+ sb.from("employee_statutory").select("pan,pf_uan,esi_number,bank_name,bank_account_last4,ifsc").eq("employee_id",id).maybeSingle().then(({data})=>{if(data){setFormValue("pan",data.pan);setFormValue("uan",data.pf_uan);setFormValue("esi",data.esi_number);setFormValue("bankName",data.bank_name);setFormValue("bankLast4",data.bank_account_last4);setFormValue("ifsc",data.ifsc);}});
+ $("addEmployeeBtn").textContent="Update employee profile";$("cancelEditBtn").classList.remove("hidden");
+ $("employeeMessage").textContent="Editing "+e.employee_code+". Update the fields and save.";
+ window.scrollTo({top:0,behavior:"smooth"});
+}
+function clearEmployeeForm(){
+ ["empCode","firstName","middleName","lastName","dob","gender","maritalStatus","bloodGroup","mobile","empEmail","emergencyName","emergencyMobile","address","joiningDate","confirmationDate","departmentName","designationName","employmentType","workLocation","empStatus","pan","uan","esi","bankName","bankLast4","ifsc"].forEach(id=>setFormValue(id,""));
+ setFormValue("empStatus","Active");editingEmployeeId=null;$("addEmployeeBtn").textContent="Save employee profile";$("cancelEditBtn").classList.add("hidden");
+}
+$("employeeSearch").addEventListener("input",renderEmployeeDirectory);
+$("statusFilter").addEventListener("change",renderEmployeeDirectory);
+$("cancelEditBtn").onclick=()=>{clearEmployeeForm();$("employeeMessage").textContent="Edit cancelled.";};
 $("loginBtn").onclick=async()=>{message("loginMessage","Signing in…");const {data,error}=await sb.auth.signInWithPassword({email:$("email").value.trim(),password:$("password").value});if(error){message("loginMessage",error.message,true);return;}showApp(data.user);try{await loadData();message("globalMessage","Cloud connection successful.");}catch(e){message("globalMessage","Signed in, but data access failed: "+e.message,true);}};
 $("resetBtn").onclick=async()=>{const email=$("email").value.trim();if(!email){message("loginMessage","Enter your account email first.",true);return;}const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});message("loginMessage",error?error.message:"If the account exists, Supabase will send a password reset email.");};
 $("savePasswordBtn").onclick=async()=>{
@@ -146,13 +178,24 @@ $("addEmployeeBtn").onclick=async()=>{
  const code=$("empCode").value.trim(),first=$("firstName").value.trim();
  if(!code||!first){message("employeeMessage","Employee code and first name are required.",true);return;}
  const row={company_id:companyId,employee_code:code,first_name:first,middle_name:$("middleName").value.trim()||null,last_name:$("lastName").value.trim()||null,date_of_birth:$("dob").value||null,gender:$("gender").value||null,marital_status:$("maritalStatus").value||null,blood_group:$("bloodGroup").value||null,mobile:$("mobile").value.trim()||null,email:$("empEmail").value.trim()||null,address:$("address").value.trim()||null,emergency_contact_name:$("emergencyName").value.trim()||null,emergency_contact_mobile:$("emergencyMobile").value.trim()||null,joining_date:$("joiningDate").value||null,confirmation_date:$("confirmationDate").value||null,department_name:$("departmentName").value.trim()||null,designation_name:$("designationName").value.trim()||null,employment_type:$("employmentType").value||null,work_location:$("workLocation").value.trim()||null,status:$("empStatus").value||"Active"};
- const {data:created,error}=await sb.from("employees").insert(row).select("id").single();
- if(error){message("employeeMessage",error.message,true);return;}
- const statutory={company_id:companyId,employee_id:created.id,pan:$("pan").value.trim()||null,pf_uan:$("uan").value.trim()||null,esi_number:$("esi").value.trim()||null,bank_name:$("bankName").value.trim()||null,bank_account_last4:$("bankLast4").value.trim()||null,ifsc:$("ifsc").value.trim()||null};
- if(Object.values(statutory).some((v,i)=>i>1 && v)){const {error:se}=await sb.from("employee_statutory").insert(statutory);if(se){message("employeeMessage","Employee profile saved, but statutory details were not saved: "+se.message,true);try{await loadData();}catch(e){}return;}}
- ["empCode","firstName","middleName","lastName","dob","gender","maritalStatus","bloodGroup","mobile","empEmail","emergencyName","emergencyMobile","address","joiningDate","confirmationDate","departmentName","designationName","employmentType","workLocation","empStatus","pan","uan","esi","bankName","bankLast4","ifsc"].forEach(id=>$(id).value="");
- message("employeeMessage","Complete employee profile saved to Supabase.");try{await loadData();}catch(e){message("employeeMessage","Saved, but refresh failed: "+e.message,true);}
+ message("employeeMessage",editingEmployeeId?"Updating employee…":"Saving employee…");
+ let employeeId=editingEmployeeId;
+ if(editingEmployeeId){
+  const {error}=await sb.from("employees").update(row).eq("id",editingEmployeeId).eq("company_id",companyId);
+  if(error){message("employeeMessage",error.message,true);return;}
+ }else{
+  const {data:created,error}=await sb.from("employees").insert(row).select("id").single();
+  if(error){message("employeeMessage",error.message,true);return;}employeeId=created.id;
+ }
+ const statutory={company_id:companyId,employee_id:employeeId,pan:$("pan").value.trim()||null,pf_uan:$("uan").value.trim()||null,esi_number:$("esi").value.trim()||null,bank_name:$("bankName").value.trim()||null,bank_account_last4:$("bankLast4").value.trim()||null,ifsc:$("ifsc").value.trim()||null};
+ if(Object.values(statutory).some((v,i)=>i>1&&v)){
+  const {error:se}=await sb.from("employee_statutory").upsert(statutory,{onConflict:"employee_id"});
+  if(se){message("employeeMessage","Employee profile saved, but statutory details were not saved: "+se.message,true);try{await loadData();}catch(e){}return;}
+ }
+ const wasEditing=!!editingEmployeeId;clearEmployeeForm();message("employeeMessage",wasEditing?"Employee profile updated.":"Employee profile saved to Supabase.");
+ try{await loadData();}catch(e){message("employeeMessage","Saved, but refresh failed: "+e.message,true);}
 };
+
 sb.auth.onAuthStateChange(async(event, session)=>{
  if(event==="PASSWORD_RECOVERY"){showRecovery();return;}
  if(event==="SIGNED_IN" && session && !$("recoveryPanel").classList.contains("hidden")) return;
